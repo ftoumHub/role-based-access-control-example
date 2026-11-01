@@ -1,19 +1,14 @@
-<!DOCTYPE HTML>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org"
-	  xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
-	<title>Administration Page</title>
-	<div th:replace="fragments/header :: header-css"/>
+    <title>Espace utilisateur</title>
+    <th:block th:replace="~{fragments/header :: header-css}"></th:block>
 </head>
 <body>
-
-<div th:replace="fragments/header :: header"/>
-
-<div sec:authorize="hasAuthority('ROLE_USER')" class="container-fluid">
-	<h1>USER PAGE</h1>
+<nav th:replace="~{fragments/header :: header}"></nav>
+<div class="container">
+    <h1>Espace utilisateur</h1>
+    <p>Page réservée à ROLE_USER.</p>
 </div>
-
-<div th:replace="fragments/footer :: footer"/>
-
 </body>
 </html>

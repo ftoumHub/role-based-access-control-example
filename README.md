@@ -1,176 +1,63 @@
-# ROLE BASED ACCESS CONTROL EXAMPLE
+# Role based access control example
 
+Application Spring Boot de démonstration : connexion durcie, authentification sans mot de passe, MFA et contrôle d'accès par rôles.
+Fork de [lombocska/role-based-access-control-example](https://github.com/lombocska/role-based-access-control-example), modernisé (plateau **P1 – durcissement**).
 
-[![Github Repo](https://img.shields.io/badge/GitHub-Repo-green.svg?longCache=true&style=flat)](https://github.com/lombocska/role-based-access-control-example)
-![Github Actions](https://github.com/lombocska/role-based-access-control-example/workflows/Java%20CI%20with%20Maven/badge.svg)
+## Stack
 
-<p align="center">
-  <a href="#description">Description</a> •
-  <a href="#tech-stack">Tech Stack</a> •
-  <a href="#approaches-highlighting-some-tech-savvy-things">Approaches</a> •
-  <a href="#usage">Usage</a> •
-  <a href="#user-credentials">User credentials</a> •
-  <a href="#inspirations">Inspiration</a>
-  <a href="#improvements-possibilities">Improvements Possibilities</a>
-</p>
+- Java 21, Spring Boot 4.1, Spring Security 7.1 (MFA, passkeys/WebAuthn, lien à usage unique)
+- Thymeleaf, Spring Data JPA, Liquibase, PostgreSQL 17
+- Spring Session JDBC (sessions partagées), Redis (compteurs anti-force brute partagés)
+- Actuator + Micrometer/Prometheus, Grafana
+- Tests : JUnit 5, MockMvc, Testcontainers (PostgreSQL + Redis)
 
-## DESCRIPTION
+## Ce que change le plateau P1
 
-**This Spring Boot app aims to show handling login attempt and authorization of the requests.**
+| Avant | Après |
+|---|---|
+| Compteur d'échecs dans une `HashMap` statique, clé = IP **ou en-tête X-Forwarded-For** | Compteurs Redis par compte **et** par IP réelle, avec expiration ; X-Forwarded-For pris en compte uniquement depuis un proxy de confiance (`server.forward-headers-strategy=native`) |
+| reCAPTCHA vérifié dans un listener, **après** l'authentification | `CaptchaVerificationFilter` placé avant `UsernamePasswordAuthenticationFilter` |
+| Pas de verrouillage | Verrouillage temporaire du compte après 10 échecs (15 min), événement + métrique |
+| Tous les endpoints Actuator ouverts sans authentification | Port de management 8081, `health` public, `prometheus` réservé au compte technique (HTTP Basic, gestionnaire d'authentification isolé), `env`/`heapdump` non exposés |
+| CSRF désactivé, déconnexion en GET | CSRF actif, déconnexion en POST |
+| Clés reCAPTCHA et mots de passe par défaut dans `application.yml` | Secrets par variables d'environnement ; démarrage refusé s'ils manquent ; valeurs locales uniquement dans le profil `dev` |
+| BCrypt seul | `DelegatingPasswordEncoder` : Argon2 pour les nouveaux hash, ré-encodage automatique des anciens hash BCrypt à la connexion |
+| Aucun état de compte | Colonnes `enabled`, `locked_until`, `account_expires_at`, `credentials_expire_at` traduites en `UserDetails` |
+| Mot de passe uniquement | + passkeys (WebAuthn) et lien de connexion à usage unique |
+| Rôle ADMIN testé à la main dans le contrôleur | `/administration/accounts` exige ROLE_ADMIN **et** deux facteurs : passkey, ou mot de passe + lien à usage unique (`AllRequiredFactorsAuthorizationManager.anyOf`) |
+| Logs applicatifs | Table `audit_event` (succès/échecs, déconnexions, refus d'autorisation) via l'audit Actuator ; métriques `app.security.authentication` et `app.security.account.lockouts` |
+| Spring Boot 2.3, `WebSecurityConfigurerAdapter`, Lombok | Spring Boot 4, `SecurityFilterChain`, records Java |
 
-- The user can log in with his/her email and password to the home page.
-- The data about the user has stored in a postgres database.
-- In case of more than 3 failed login attempts, user needs to validate itself via a captcha.
-- The logged in user can see only pages he/her is authorized.
-- There is a logout functionality in the menubar.
+À noter : dans Spring Security 7.1, `OneTimeTokenAuthenticationProvider` et `WebAuthnAuthenticationProvider` ne vérifient pas l'état du compte. `StatusEnforcingUserDetailsService` comble ce manque : un compte verrouillé ou désactivé ne peut pas non plus se connecter par lien ou par passkey (couvert par `SecurityIT`).
 
+## Lancer en local
 
-## TECH STACK
-
-- Spring Boot Parent 2.3.1
-- Thymeleaf SpringSecurity5  5.3.0.4
-- Micrometer Prometheus  1.5.1
-- Lombok 1.18.12
-- Postgres Driver 42.2.14
-- Liquibase 3.8.9
-- Google reCaptcha (v2)
-- Docker
-- Github Actions
-- docker-compose-maven-plugin 1.0.1
-- docker-file-maven-plugin 1.4.10
-
-### Login Page
-
-![login](./doc/login.png)
-
-### reCaptcha after 3 failed attempts
-
-![recaptcha](./doc/recaptcha.png)
-
-### index page
-
-![index](./doc/index.png)
-
-### administration page with ADMIN, EDITOR, USER  authorities
-
-![index](./doc/administration-page-as-admin.png)
-
-### administration page with EDITOR & USER authorities
-
-![index](./doc/administration-page-as-editor-and-user.png)
-
-### administration page with only EDITOR authoritiy
-
-![index](./doc/administration-page-as-editor.png)
-
-### administration page with only USER authoritiy
-
-![index](./doc/administration-page-as-user.png)
-
-
-## APPROACHES - Highlighting some tech savvy things
-
-### layered dockerfile for efficiency
-
-> There is a clean separation between dependencies and application resources in a Spring Boot fat jar file, 
->and we can use that fact to improve performance. 
->The key is to create layers in the container filesystem. The layers are cached both at build time 
->and at runtime (in most runtimes) so we want the most frequently changing resources, 
->usually the class and static resources in the application itself, to be layered after the more slowly changing resources. 
-
-### prometheus for metrics
-
-> Prometheus is an open-source systems monitoring and alerting toolkit originally built at SoundCloud. 
-> Since its inception in 2012, many companies and organizations have adopted Prometheus, and the project has a very active developer and account community.
-
-The default dashboard for JVM micrometer had created by [Michael Weirauch](https://grafana.com/orgs/mweirauch) and the template can be found [here](https://grafana.com/grafana/dashboards/4701).
-
- 
-![prometheus jvm](./doc/prometheus-jvm-metrics.png)
-
-
-### docker-compose-maven-plugin
-
-> Maven plugin for running basic docker-compose commands with Maven.
-In case of this app, integration tests needed postgres db running via this plugin.
-
-
-### reCaptcha Google [v2]
-
-> reCAPTCHA is a free service that protects your website from spam and abuse.
-> reCAPTCHA uses an advanced risk analysis engine and adaptive challenges to keep automated software from engaging 
-> in abusive activities on your site. It does this while letting your valid users pass through with ease.
-
-I included my reCaptcha site and secret key to this project intentionally for everybody who wants to try this app out.
-
-### user session storage via spring-session-jdbc
-
-> Spring Session makes it trivial to support clustered sessions without being tied to an application container specific solution. 
-> It also provides transparent integration with:
-> HttpSession - allows replacing the HttpSession in an application container (i.e. Tomcat) 
-> neutral way, with support for providing session IDs in headers to work with RESTful APIs
-> etc...
-
-### liquibase
-
-> Liquibase is an open-source database-independent library for tracking, managing and applying database schema changes. 
-
-As for spring-session-jdbc, schema-postgresql.sql comes from the dependency org package.
-
-
-```
-Note: LIQUIBASE_CONTEXTS environment variable should set to 'dev' for getting default accounts into the db.
+```bash
+./mvnw -DskipTests package
+docker compose -f docker/compose.yml up --build
 ```
 
-### security filter chain in case of [Username/Password Authentication](https://docs.spring.io/spring-security/site/docs/current/reference/pdf/spring-security-reference.pdf)
+- Application : http://localhost:8080 (profil `dev`)
+- Le lien de connexion à usage unique est écrit dans les logs de l'application (adaptateur `LoggingMagicLinkSender`)
+- Prometheus : http://localhost:9090, Grafana : http://localhost:3000 (admin/admin)
 
+Variables attendues hors profil `dev` : `DB_USERNAME`, `DB_PASSWORD`, `RECAPTCHA_SITE_KEY`, `RECAPTCHA_SECRET_KEY`, `MONITORING_PASSWORD`, et selon le déploiement `WEBAUTHN_RP_ID`, `WEBAUTHN_ALLOWED_ORIGINS`, `REDIS_HOST`, `LIQUIBASE_CONTEXTS`.
 
-![sec filter chain](./doc/security-filter-chain.png)
+## Comptes de démonstration (profil `dev`, mot de passe `test`)
 
+| Email | Rôles |
+|---|---|
+| admin@admin.com | ROLE_ADMIN, ROLE_EDITOR, ROLE_USER |
+| user1@test.com | ROLE_EDITOR, ROLE_USER |
+| user2@test.com | ROLE_EDITOR |
+| user3@test.com | ROLE_USER |
 
-## USAGE 
+Pour l'administration, connectez-vous avec admin@admin.com puis ouvrez « Administration » : l'application demande un second facteur (lien à usage unique, ou passkey enregistrée depuis « Mes passkeys »).
 
-0. `./mvnw clean install` for creating the docker image of the app and running tests
-1. fire up postgres, prometheus, grafana and the app itself `docker-compose -f docker/postgresql.yml -f docker/monitoring.yml -f docker/app.yml up --build`
-2. visit `localhost:8080`
-3. login page should prompt
-4. login with valid credentials mentioned here  <a href="#user-credentials">User credentials</a> •
-5. check pages with different authorities
+## Tests
 
-6. visit `localhost:3000`
-7. grafana default login credentials is `admin-admin` and skip the password change
-8. visit provisioned JVM(Micrometer) dashboard and fathom micrometer metrics of the app
-
-
+```bash
+./mvnw verify   # Docker requis pour Testcontainers
 ```
-Note: docker settings (host.docker.internal) works for MacOS, but on Windows it won't. In theory, 'host' should be used on Windows, but I don't have a chance to try it out.
-```
 
-## USER CREDENTIALS
-
-1. username: admin@admin.com • password: tes • authorities: ROLE_ADMIN, ROLE_EDITOR, ROLE_USER
-1. username: user1@test.com • password: test • authorities: ROLE_EDITOR, ROLE_USER
-1. username: user2@test.com • password: test • authorities: ROLE_EDITOR
-1. username: user3@test.com • password: test • authorities: ROLE_USER
-
-## INSPIRATIONS
-
-- [Spring Boot Docker Layers](https://springframework.guru/why-you-should-be-using-spring-boot-docker-layers/)
-- [JarLauncher](https://docs.spring.io/spring-boot/docs/current/api/org/springframework/boot/loader/JarLauncher.html)
-- [Prometheus](https://prometheus.io/docs/introduction/overview/)
-- [docker-compose-maven-plugin](https://github.com/dkanejs/docker-compose-maven-plugin)
-- [reCaptcha](https://www.google.com/recaptcha/intro/v3.html)
-- [Spring Session](https://spring.io/projects/spring-session-jdbc)
-
-
-## IMPROVEMENTS POSSIBILITIES
-
-- [ ] authorization test had to be disabled, because thymeleaf template was unserializable
-- [ ] tracing (sleuth)
-- [ ] dockerfile run with account not default
-- [ ] ELK stack for logging
-- [ ] publish to docker hub via github actions
-- [ ] prometheus metrics for failed, succeeded login attempts
-- [ ] shared cache instead of Map for storing login attempt 
-
-
+`BruteForceProtectionTest` (unitaire) couvre la politique anti-force brute ; `SecurityIT` (intégration) couvre connexion, CAPTCHA avant authentification, X-Forwarded-For forgé, verrouillage, liens à usage unique, matrice rôles × pages, MFA admin, CSRF, déconnexion, Actuator et audit.

@@ -1,15 +1,15 @@
-<!DOCTYPE HTML>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
-    <title>Administration Page</title>
-    <div th:replace="fragments/header :: header-css"/>
+    <title>Erreur</title>
+    <th:block th:replace="~{fragments/header :: header-css}"></th:block>
 </head>
 <body>
+<nav th:replace="~{fragments/header :: header}"></nav>
 <div class="container">
-
-    <h1>Error occurred</h1>
-    <h2>Please contact website admin</h2>
-    <a href="/">Home</a>
+    <h1>Une erreur est survenue</h1>
+    <p th:if="${status}" th:text="|Code ${status}|">Code</p>
+    <a th:href="@{/}">Retour à l'accueil</a>
 </div>
 </body>
 </html>

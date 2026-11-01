@@ -1,20 +1,15 @@
-<!DOCTYPE HTML>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
-    <title>Home Page</title>
-    <div th:replace="fragments/header :: header-css"/>
+    <title>Accueil</title>
+    <th:block th:replace="~{fragments/header :: header-css}"></th:block>
 </head>
 <body>
-
-<div th:replace="fragments/header :: header"/>
-
-<div class="container-fluid">
-
-    <h1>This is the index page</h1>
-
+<nav th:replace="~{fragments/header :: header}"></nav>
+<div class="container">
+    <h1>Accueil</h1>
+    <p sec:authorize="isAuthenticated()">Connecté en tant que <strong sec:authentication="name">user</strong>.</p>
+    <p sec:authorize="isAnonymous()"><a th:href="@{/login}">Se connecter</a></p>
 </div>
-
-<div th:replace="fragments/footer :: footer"/>
-
 </body>
 </html>

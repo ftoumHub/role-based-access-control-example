@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    username: test     # remplacés par @ServiceConnection
+    password: test
+  liquibase:
+    contexts: dev      # comptes de démonstration
+  thymeleaf:
+    cache: false
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false
+
+management:
+  server:
+    port: 8080         # même port que l'application : MockMvc atteint /actuator
+
+app:
+  security:
+    brute-force:
+      store: redis
+    recaptcha:
+      site-key: test-site-key
+      secret-key: test-secret-key
+    monitoring:
+      password: test-monitoring

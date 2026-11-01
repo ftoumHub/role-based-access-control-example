@@ -1,38 +1,34 @@
-<!DOCTYPE HTML>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org"
-	  xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5">
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
-	<title>Administration Page</title>
-	<div th:replace="fragments/header :: header-css"/>
+    <title>Administration</title>
+    <th:block th:replace="~{fragments/header :: header-css}"></th:block>
 </head>
 <body>
-
-<div th:replace="fragments/header :: header"/>
-
-<div class="container-fluid">
-
-	<table class="table">
-
-		<thead class="thead-dark">
-		<tr>
-			<th scope="col">#</th>
-			<th scope="col">Username</th>
-			<th scope="col">Authorities</th>
-			<th scope="col">Last login date</th>
-		</tr>
-		</thead>
-		<tbody>
-		<tr th:each="account : ${accounts}">
-			<th scope="row" th:text="${account.id}">1</th>
-			<td th:text="${account.userName}">username</td>
-			<td th:text="${account.authorities}"></td>
-			<td th:text="${account.lastLoginDate}">last login</td>
-		</tr>
-		</tbody>
-	</table>
+<nav th:replace="~{fragments/header :: header}"></nav>
+<div class="container">
+    <h1>Comptes</h1>
+    <p class="text-muted">Accès réservé à ROLE_ADMIN avec deux facteurs (passkey, ou mot de passe + lien à usage unique).</p>
+    <table class="table table-sm">
+        <thead class="thead-dark">
+        <tr><th>#</th><th>Email</th><th>Nom</th><th>Rôles</th><th>Dernière connexion</th><th>État</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="account : ${accounts}">
+            <td th:text="${account.id}">1</td>
+            <td th:text="${account.email}">email</td>
+            <td th:text="${account.userName}">nom</td>
+            <td th:text="${#strings.setJoin(account.authorities, ', ')}">rôles</td>
+            <td th:text="${account.lastLoginDate}">date</td>
+            <td>
+                <span th:if="${!account.enabled}" class="badge badge-secondary">désactivé</span>
+                <span th:if="${account.lockedUntil != null}" class="badge badge-warning"
+                      th:text="|verrouillé jusqu’à ${account.lockedUntil}|">verrouillé</span>
+                <span th:if="${account.enabled and account.lockedUntil == null}" class="badge badge-success">actif</span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
 </div>
-
-<div th:replace="fragments/footer :: footer"/>
-
 </body>
 </html>

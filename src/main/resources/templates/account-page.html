@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Mon compte</title>
+    <th:block th:replace="~{fragments/header :: header-css}"></th:block>
+</head>
+<body>
+<nav th:replace="~{fragments/header :: header}"></nav>
+<div class="container">
+    <h1>Mon compte</h1>
+    <dl class="row" th:if="${account}" th:object="${account}">
+        <dt class="col-sm-4">Email</dt><dd class="col-sm-8" th:text="*{email}">email</dd>
+        <dt class="col-sm-4">Nom</dt><dd class="col-sm-8" th:text="*{userName}">nom</dd>
+        <dt class="col-sm-4">Rôles</dt><dd class="col-sm-8" th:text="${#strings.setJoin(account.authorities, ', ')}">rôles</dd>
+        <dt class="col-sm-4">Dernière connexion</dt><dd class="col-sm-8" th:text="*{lastLoginDate}">date</dd>
+    </dl>
+    <h4 class="mt-4">Facteurs de la session en cours</h4>
+    <ul>
+        <li sec:authorize="hasAuthority('FACTOR_PASSWORD')">Mot de passe</li>
+        <li sec:authorize="hasAuthority('FACTOR_OTT')">Lien à usage unique</li>
+        <li sec:authorize="hasAuthority('FACTOR_WEBAUTHN')">Passkey</li>
+    </ul>
+    <a class="btn btn-outline-dark" th:href="@{/webauthn/register}">Gérer mes passkeys</a>
+</div>
+</body>
+</html>

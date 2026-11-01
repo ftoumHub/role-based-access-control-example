@@ -1,14 +1,16 @@
 package io.lombocska.app.authorization;
 
-import org.springframework.security.access.prepost.PreAuthorize;
-
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target({ElementType.METHOD, ElementType.TYPE})
+import org.springframework.security.access.prepost.PreAuthorize;
+
+/** Exige ROLE_EDITOR. Toutes les méta-annotations utilisent la même forme : hasRole. */
+@Target({ ElementType.METHOD, ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
-@PreAuthorize("hasAnyRole('ROLE_EDITOR')")
+@PreAuthorize("hasRole('EDITOR')")
 public @interface IsEditor {
+
 }

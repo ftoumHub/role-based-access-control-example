@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- États de compte et hash de mot de passe préfixé ({argon2}..., {bcrypt}...) -->
+    <changeSet id="p1-01-account-states" author="p1-hardening">
+        <modifyDataType tableName="account" columnName="password" newDataType="varchar(255)"/>
+        <modifyDataType tableName="account" columnName="last_login_date" newDataType="timestamp with time zone"/>
+        <addColumn tableName="account">
+            <column name="enabled" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="locked_until" type="timestamp with time zone"/>
+            <column name="account_expires_at" type="timestamp with time zone"/>
+            <column name="credentials_expire_at" type="timestamp with time zone"/>
+        </addColumn>
+        <addNotNullConstraint tableName="account" columnName="email" columnDataType="varchar(191)"/>
+    </changeSet>
+
+    <!-- Journal d'audit (alimenté par les listeners d'audit Actuator) -->
+    <changeSet id="p1-02-audit-event" author="p1-hardening">
+        <createTable tableName="audit_event">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="occurred_at" type="timestamp with time zone">
+                <constraints nullable="false"/>
+            </column>
+            <column name="principal" type="varchar(191)"/>
+            <column name="type" type="varchar(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="remote_address" type="varchar(64)"/>
+            <column name="detail" type="varchar(1000)"/>
+        </createTable>
+        <createIndex tableName="audit_event" indexName="ix_audit_event_principal_time">
+            <column name="principal"/>
+            <column name="occurred_at"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Connexion par lien à usage unique (JdbcOneTimeTokenService) -->
+    <changeSet id="p1-03-one-time-tokens" author="p1-hardening">
+        <createTable tableName="one_time_tokens">
+            <column name="token_value" type="varchar(36)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="username" type="varchar(191)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expires_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- Passkeys : schéma PostgreSQL fourni par spring-security-webauthn -->
+    <changeSet id="p1-04-webauthn" author="p1-hardening" dbms="postgresql">
+        <sql>
+            create table user_entities
+            (
+                id           varchar(1000) not null,
+                name         varchar(100)  not null,
+                display_name varchar(200),
+                primary key (id)
+            );
+            create table user_credentials
+            (
+                credential_id                varchar(1000) not null,
+                user_entity_user_id          varchar(1000) not null,
+                public_key                   bytea         not null,
+                signature_count              bigint,
+                uv_initialized               boolean,
+                backup_eligible              boolean       not null,
+                authenticator_transports     varchar(1000),
+                public_key_credential_type   varchar(100),
+                backup_state                 boolean       not null,
+                attestation_object           bytea,
+                attestation_client_data_json bytea,
+                created                      timestamp,
+                last_used                    timestamp,
+                label                        varchar(1000) not null,
+                primary key (credential_id)
+            );
+        </sql>
+    </changeSet>
+
+    <!-- Compte technique de supervision : rôle déclaré pour cohérence, le compte lui-même est en mémoire -->
+    <changeSet id="p1-05-monitoring-role" author="p1-hardening">
+        <insert tableName="authority">
+            <column name="name" value="ROLE_MONITORING"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,28 @@
+# Profil de développement local : à ne jamais activer en production.
+spring:
+  datasource:
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+  liquibase:
+    contexts: ${LIQUIBASE_CONTEXTS:dev}
+  thymeleaf:
+    cache: false
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false   # http://localhost
+
+logging:
+  level:
+    io.lombocska: DEBUG
+
+app:
+  security:
+    recaptcha:
+      # Clés de test publiques de Google : le widget s'affiche et toute réponse est acceptée.
+      site-key: ${RECAPTCHA_SITE_KEY:6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI}
+      secret-key: ${RECAPTCHA_SECRET_KEY:6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe}
+    monitoring:
+      password: ${MONITORING_PASSWORD:dev-monitoring}

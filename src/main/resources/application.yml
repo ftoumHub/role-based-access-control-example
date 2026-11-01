@@ -1,49 +1,77 @@
+# Configuration de base : aucune valeur secrète par défaut.
+# Les secrets viennent de l'environnement ; le profil "dev" fournit des valeurs locales.
 spring:
   application:
-    name: '@name@'
-    version: '@version@'
+    name: role-based-access-control-example
   datasource:
-    pool-prepared-statements: true
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:postgres}?useUnicode=true&characterEncoding=utf8
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:postgres}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
   jpa:
     open-in-view: false
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
-    show-sql: false
-    generate-ddl: true
     hibernate:
-      naming-strategy: org.hibernate.cfg.EJB3NamingStrategy
-      ddl-auto: validate
-    properties:
-      hibernate.cache.use_second_level_cache: false
-      hibernate.cache.use_query_cache: false
-      hibernate.generate_statistics: false
-      hibernate.temp.use_jdbc_metadata_defaults: false
+      ddl-auto: none   # le schéma appartient à Liquibase
   liquibase:
     change-log: classpath:db/liquibase-changelog.xml
-    contexts: ${LIQUIBASE_CONTEXTS}
+    contexts: ${LIQUIBASE_CONTEXTS:prod}
+  session:
+    jdbc:
+      initialize-schema: never   # tables créées par Liquibase
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   thymeleaf:
-    cache: false
+    cache: true
+
+server:
+  # X-Forwarded-For n'est pris en compte que s'il vient d'un proxy de confiance
+  # (par défaut Tomcat : 10/8, 192.168/16, 172.16/12, 127/8, 169.254/16).
+  forward-headers-strategy: native
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${COOKIE_SECURE:true}
 
 management:
+  server:
+    port: ${MANAGEMENT_PORT:8081}
   endpoints:
     web:
       exposure:
-        include: "*"
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+      roles: MONITORING
+      probes:
+        enabled: true
   metrics:
     tags:
       application: ${spring.application.name}
 
 logging:
   level:
-    io.lombocska: ${LOG_LEVEL_APP:DEBUG}
+    io.lombocska: ${LOG_LEVEL_APP:INFO}
     org.springframework.security: INFO
 
-google:
-  recaptcha:
-    key:
-      site: ${GOOGLE_RECAPTCHA_SITE_KEY:6LffHqsZAAAAAHP6k2kbXaSxq9AKX_LYO7Ua1D77}
-      secret: ${GOOGLE_RECAPTCHA_SECRET_KEY:6LffHqsZAAAAACRUp2H8FwOBzjGO5bjDgs6gf34V}
-      verificationUrl: "https://www.google.com/recaptcha/api/siteverify"
-
+app:
+  security:
+    brute-force:
+      captcha-threshold: 3
+      lock-threshold: 10
+      window: 15m
+      lock-duration: 15m
+      store: redis
+    recaptcha:
+      site-key: ${RECAPTCHA_SITE_KEY}
+      secret-key: ${RECAPTCHA_SECRET_KEY}
+    webauthn:
+      rp-id: ${WEBAUTHN_RP_ID:localhost}
+      rp-name: RBAC example
+      allowed-origins: ${WEBAUTHN_ALLOWED_ORIGINS:http://localhost:8080}
+    monitoring:
+      username: prometheus
+      password: ${MONITORING_PASSWORD}

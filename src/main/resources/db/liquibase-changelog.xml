@@ -14,5 +14,6 @@
 
     <include file="db/changelog/01-init.xml" relativeToChangelogFile="false"/>
     <include file="db/changelog/02-load-dev-data.xml" relativeToChangelogFile="false"/>
+    <include file="db/changelog/03-p1-hardening.xml" relativeToChangelogFile="false"/>
 
 </databaseChangeLog>
