@@ -137,6 +137,8 @@ public class SecurityConfiguration {
 				.failureHandler(failureHandler)
 				.permitAll())
 			.oneTimeTokenLogin((ott) -> ott
+				// page personnalisée : sinon la page de connexion générée par défaut reprend /login
+				.loginPage("/login")
 				.tokenService(oneTimeTokenService)
 				.tokenGenerationSuccessHandler(new MagicLinkGenerationSuccessHandler(accounts, magicLinkSender))
 				.authenticationProvider(new OneTimeTokenAuthenticationProvider(oneTimeTokenService, passwordless))
