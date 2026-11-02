@@ -139,6 +139,7 @@ public class SecurityConfiguration {
 			.oneTimeTokenLogin((ott) -> ott
 				// page personnalisée : sinon la page de connexion générée par défaut reprend /login
 				.loginPage("/login")
+				.loginProcessingUrl("/login/ott") // loginPage() la ramènerait sinon sur POST /login
 				.tokenService(oneTimeTokenService)
 				.tokenGenerationSuccessHandler(new MagicLinkGenerationSuccessHandler(accounts, magicLinkSender))
 				.authenticationProvider(new OneTimeTokenAuthenticationProvider(oneTimeTokenService, passwordless))

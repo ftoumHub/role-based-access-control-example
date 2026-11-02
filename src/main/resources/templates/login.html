@@ -67,8 +67,9 @@
 
 <script th:src="@{/login/webauthn.js}"></script>
 <script th:inline="javascript">
+    const csrfHeaderName = /*[[${_csrf.headerName}]]*/ 'X-CSRF-TOKEN';
     const csrfHeaders = {};
-    csrfHeaders[/*[[${_csrf.headerName}]]*/ 'X-CSRF-TOKEN'] = /*[[${_csrf.token}]]*/ '';
+    csrfHeaders[csrfHeaderName] = /*[[${_csrf.token}]]*/ '';
     document.addEventListener('DOMContentLoaded', () => {
         const button = document.getElementById('passkey-signin');
         if (button && window.setupLogin) {

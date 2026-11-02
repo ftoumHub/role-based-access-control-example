@@ -27,7 +27,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
-import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.authenticated;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -275,10 +274,9 @@ class SecurityIT {
 
 		@Test
 		void logoutRequiresPost() throws Exception {
-			// GET n'affiche que la page de confirmation (formulaire POST) : aucune déconnexion
+			// pas de page de déconnexion générée, et GET ne déconnecte pas
 			SecurityIT.this.mvc.perform(get("/logout").with(user(USER).roles("USER")))
-				.andExpect(status().isOk())
-				.andExpect(authenticated());
+				.andExpect(status().isNotFound());
 			assertThat(redirectOf(post("/logout").with(user(USER).roles("USER")).with(csrf())))
 				.isEqualTo("/login?logout");
 		}
